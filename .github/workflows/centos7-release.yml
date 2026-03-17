@@ -45,7 +45,7 @@ jobs:
 
       - name: Package Binary
         run: |
-          tar -czvf ser2net-centos7.tar.gz ser2net ser2netconf
+          tar -czvf ser2net-centos7.tar.gz ser2net
 
       - name: Upload Release
         uses: softprops/action-gh-release@v2
