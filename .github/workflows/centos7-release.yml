@@ -23,11 +23,11 @@ jobs:
           push: false
           load: true
           tags: ser2net-centos7
+          file: Dockerfile.centos7
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             GENSIO_VERSION=v2.8.4
-          dockerfile: Dockerfile.centos7
 
       - name: Extract binary
         run: |
