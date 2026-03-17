@@ -1,0 +1,60 @@
+name: Build CentOS 7 Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: centos:7
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          yum install -y autoconf automake libtool gcc make
+          yum install -y centos-release-scl
+          yum install -y devtoolset-7-gcc devtoolset-7-gcc-c++
+          yum install -y libyaml-devel
+          yum install -y git
+
+      - name: Install gensio from source
+        run: |
+          yum install -y libev-devel libmd-devel libcurl-devel
+          cd /tmp
+          git clone --depth 1 --branch v2.8.4 https://github.com/cminyard/gensio.git
+          cd gensio
+          ./autogen.sh
+          ./configure --prefix=/usr/local
+          make -j$(nproc)
+          make install
+          ldconfig
+
+      - name: Build ser2net
+        run: |
+          cd /root/485/ser2net
+          source /opt/rh/devtoolset-7/enable
+          export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+          ./autogen.sh
+          ./configure --prefix=/usr/local
+          make -j$(nproc)
+
+      - name: Create release package
+        run: |
+          source /opt/rh/devtoolset-7/enable
+          export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+          cd /root/485/ser2net
+          strip ser2net ser2netconf
+          tar -czvf ser2net-centos7.tar.gz ser2net ser2netconf
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ser2net-centos7.tar.gz
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
