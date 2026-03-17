@@ -9,36 +9,47 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build in CentOS 7 container
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: false
-          load: true
-          tags: ser2net-centos7
-          file: Dockerfile.centos7
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            GENSIO_VERSION=v2.8.4
-
-      - name: Extract binary
+      - name: Compile ser2net in CentOS 7 Docker
         run: |
-          docker create --name ser2net ser2net-centos7:latest
-          docker cp ser2net:/root/485/ser2net/ser2net ./ser2net
-          docker cp ser2net:/root/485/ser2net/ser2netconf ./ser2netconf
-          docker rm ser2net
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace centos:7 /bin/bash -c "
+            sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* &&
+            sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* &&
+            yum clean all &&
+            
+            yum install -y gcc make git autoconf automake libtool libyaml-devel libev-devel libmd-devel libcurl-devel &&
+
+            cd /tmp &&
+            git clone --depth 1 --branch v2.8.4 https://github.com/cminyard/gensio.git &&
+            cd gensio &&
+            ./autogen.sh &&
+            ./configure --prefix=/usr/local &&
+            make -j\$(nproc) &&
+            make install &&
+            ldconfig &&
+
+            cd /workspace &&
+            export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:\$PKG_CONFIG_PATH &&
+            ./autogen.sh &&
+            ./configure --prefix=/usr/local &&
+            make -j\$(nproc)
+          "
+
+      - name: Fix Permissions
+        run: sudo chown -R $USER:$USER .
+
+      - name: Package Binary
+        run: |
           tar -czvf ser2net-centos7.tar.gz ser2net ser2netconf
 
-      - name: Upload Release Asset
+      - name: Upload Release
         uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ser2net-centos7.tar.gz
           draft: true
