@@ -1,0 +1,33 @@
+FROM centos:7
+
+ARG GENSIO_VERSION=v2.8.4
+
+RUN yum install -y autoconf automake libtool gcc make centos-release-scl && \
+    yum install -y devtoolset-7-gcc devtoolset-7-gcc-c++ && \
+    yum install -y git && \
+    yum install -y libyaml-devel && \
+    yum install -y libev-devel libmd-devel libcurl-devel && \
+    yum clean all
+
+RUN cd /tmp && \
+    git clone --depth 1 --branch ${GENSIO_VERSION} https://github.com/cminyard/gensio.git && \
+    cd gensio && \
+    /opt/rh/devtoolset-7/enable && \
+    ./autogen.sh && \
+    ./configure --prefix=/usr/local && \
+    make -j$(nproc) && \
+    make install && \
+    ldconfig && \
+    rm -rf /tmp/gensio
+
+WORKDIR /root/485/ser2net
+
+COPY . .
+
+RUN /opt/rh/devtoolset-7/enable && \
+    export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
+    ./autogen.sh && \
+    ./configure --prefix=/usr/local && \
+    make -j$(nproc)
+
+ENTRYPOINT ["/bin/bash"]
