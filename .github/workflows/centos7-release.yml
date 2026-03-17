@@ -27,7 +27,7 @@ jobs:
             cd /tmp &&
             git clone --depth 1 --branch v2.8.4 https://github.com/cminyard/gensio.git &&
             cd gensio &&
-            ./autogen.sh &&
+            autoreconf -fi &&
             ./configure --prefix=/usr/local &&
             make -j\$(nproc) &&
             make install &&
