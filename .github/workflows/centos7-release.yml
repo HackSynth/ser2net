@@ -35,7 +35,7 @@ jobs:
 
             cd /workspace &&
             export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:\$PKG_CONFIG_PATH &&
-            ./autogen.sh &&
+            autoreconf -fi &&
             ./configure --prefix=/usr/local &&
             make -j\$(nproc)
           "
