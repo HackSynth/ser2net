@@ -2,6 +2,9 @@ FROM centos:7
 
 ARG GENSIO_VERSION=v2.8.4
 
+RUN sed -i 's|mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/CentOS-*.repo && \
+    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*.repo
+
 RUN yum install -y autoconf automake libtool gcc make centos-release-scl && \
     yum install -y devtoolset-7-gcc devtoolset-7-gcc-c++ && \
     yum install -y git && \
